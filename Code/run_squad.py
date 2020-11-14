@@ -12,6 +12,7 @@ import os
 import random
 import timeit
 import glob
+import pdb
 
 import numpy as np
 import torch
@@ -20,6 +21,7 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
+import transformers
 from transformers import (
     MODEL_FOR_QUESTION_ANSWERING_MAPPING,
     WEIGHTS_NAME,
@@ -591,7 +593,7 @@ def main():
     parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument(
-        # 这个num_train_epochs代表了什么为什么default是3.0
+        # bug 这个num_train_epochs代表了什么为什么default是3.0
         "--num_train_epochs", default=3.0, type=float, help="Total number of training epochs to perform."
     )
     parser.add_argument(
@@ -600,7 +602,7 @@ def main():
         type=int,
         help="If > 0: set total number of training steps to perform. Override num_train_epochs."
     )
-    # 不懂
+    # bug
     parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
     parser.add_argument(
         "--n_best_size",
@@ -648,7 +650,7 @@ def main():
     parser.add_argument(
         "--fp16",
         action="store_true",
-        help="Whether to use 16-bit(mixed) precision (through NVIDIA apex) instaed of 32-bit",
+        help="Whether to use 16-bit(mixed) precision (through NVIDIA apex) instead of 32-bit",
     )
     parser.add_argument(
         "--fp16_opt_level",
@@ -766,6 +768,7 @@ def main():
             raise  ImportError("Please install apex from http://www.github.com/nvidia/apex to use fp16 training.")
 
     # Training
+    pdb.set_trace()
     if args.do_train:
         train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False)
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
