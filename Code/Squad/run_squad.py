@@ -92,11 +92,11 @@ def train(args, train_dataset, model, tokenizer):
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {
-            "params": [p for n, p in model.named_paramets() if not any(nd in n for nd in no_decay)],
+            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
             "weight_decay": args.weight_decay,
         },
         {
-            "params": [p for n, p in model.named_paramets() if any(nd in n for nd in no_decay)],
+            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
             "weight_decay": 0.0,
         }
     ]
@@ -227,7 +227,7 @@ def train(args, train_dataset, model, tokenizer):
                     torch.nn.utils.clip_grad_norm(amp.master_params(optimizer), args.max_grad_norm)
                 else:
                     # Clips gradient norm of an iterable of parameters.
-                    torch.nn.utils.clip_grad_norm(model.named_paramets(), args.max_grad_norm)
+                    torch.nn.utils.clip_grad_norm(model.named_parameters(), args.max_grad_norm)
 
                 optimizer.step()
                 scheduler.step()  # Update learning rate schedule
@@ -249,7 +249,7 @@ def train(args, train_dataset, model, tokenizer):
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                     output_dir = os.path.join(args.output_dir, "checkpoint-{}}".format(global_step))
                     # Take care of distributed/parallel training
-                    model_to_save = model.module if hasattr(mode, "module") else model
+                    model_to_save = model.module if hasattr(model, "module") else model
                     model_to_save.save_pretrained(output_dir)
                     tokenizer.save_pretrained(output_dir)
 
@@ -414,7 +414,7 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
 
     # Load data features from cache or dataset file
     input_dir = args.data_dir if args.data_dir else "."
-    cache_features_file = os.path.join(
+    cached_features_file = os.path.join(
         input_dir,
         "cached_{}_{}_{}".format(
             "dev" if evaluate else "train",
@@ -425,9 +425,9 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
     )
 
     # Init features and dataset from cache if it exists
-    if os.path.exists(cache_features_file) and not args.overwrite_cache:
+    if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
-        features_and_dataset = torch.load(cache_features_file)
+        features_and_dataset = torch.load(cached_features_file)
         features, dataset, examples = (
             features_and_dataset["features"],
             features_and_dataset["dataset"],
