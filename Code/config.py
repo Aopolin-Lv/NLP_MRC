@@ -9,6 +9,7 @@
 class SquadConfig(object):
     def __init__(self):
         self.SQUAD_DIR = "../../Dataset/squad2.0"
+        self.MOLWENI_DIR = "../../Dataset/Molweni"
         self.model_type = "bert"                                    # ["distilbert", "albert", "bert", "xlnet", ...]
         self.model_name_or_path = "bert-base-uncased"
         self.do_train = True

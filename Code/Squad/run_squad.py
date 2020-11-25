@@ -107,7 +107,7 @@ def train(args, train_dataset, model, tokenizer):
     )
 
     # Check if saved optimizer or scheduler states exist
-    if os.path.isfile(os.path.join(args.model_nam_or_path, "optimizer.pt")) and os.path.isfile(
+    if os.path.isfile(os.path.join(args.model_name_or_path, "optimizer.pt")) and os.path.isfile(
         os.path.join(args.model_name_or_path, "scheduler.pt")
     ):
         # Load in optimizer and scheduler states
@@ -168,7 +168,7 @@ def train(args, train_dataset, model, tokenizer):
     model.zero_grad()
     # trange是tqdm(range(i))的简单写法
     train_iterator = trange(
-        epochs_trained, int(args.num_train_epochs), desc="Epoch", disable=args.loacal_rank not in [-1, 0]
+        epochs_trained, int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]
     )
 
     # Added here for reproductibility
