@@ -12,10 +12,7 @@ import os
 import random
 import timeit
 import glob
-import sys
-from Code.config import SquadConfig
-
-from transformers import BertTokenizer
+# from Code.Molweni.config import SquadConfig
 
 import numpy as np
 import torch
@@ -24,7 +21,6 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
-import transformers
 from transformers import (
     MODEL_FOR_QUESTION_ANSWERING_MAPPING,
     WEIGHTS_NAME,
@@ -41,7 +37,6 @@ from transformers.data.metrics.squad_metrics import (
     squad_evaluate,
 )
 # 用来准备自定义Molweni数据集的处理格式
-from transformers.data.processors.utils import DataProcessor
 from transformers.data.processors.squad import SquadV1Processor, SquadV2Processor, SquadResult
 
 
@@ -206,7 +201,7 @@ def train(args, train_dataset, model, tokenizer):
                     )
 
             outputs = model(**inputs)
-            # model outputs are always tuple in transfomers(see doc)
+            # model outputs are always tuple in transfomers(see doc)max_grad_norm
             loss = outputs[0]
 
             if args.n_gpu > 1:
@@ -695,7 +690,7 @@ def main():
             )
         )
 
-    #Setup distant debugging if need
+    # Setup distant debugging if need
     if args.server_ip and args.server_port:
         # Distant debugging - see https://code.visualstudio.,com/docs/python/debugging#_attach-to-a-local-script
         import ptvsd
@@ -788,7 +783,7 @@ def main():
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
-    #Save the trained model and the tokenizer
+    # Save the trained model and the tokenizer
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
         logger.info("Saving model checkpoint to %s", args.output_dir)
         # Save a trained model, configuration and tokenizer using `save_pretrained()`.

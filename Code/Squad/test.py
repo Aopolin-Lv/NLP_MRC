@@ -6,7 +6,7 @@
 @Contact:       aopolin.ii@gmail.com
 @Description:
 """
-from Code.config import SquadConfig
+# from Code.Molweni.config import SquadConfig
 import json
 import numpy as np
 from tqdm import tqdm, trange
@@ -14,7 +14,9 @@ import os
 import timeit
 import random
 import logging
+import math
 import collections
+import re
 
 import torch
 from torch.utils.data import TensorDataset
@@ -28,6 +30,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 from transformers.tokenization_utils_base import TruncationStrategy
+from transformers.tokenization_bert import BasicTokenizer
 from transformers.data.processors.utils import DataProcessor
 
 class SquadExample:
@@ -206,7 +209,7 @@ class SquadProcessor(DataProcessor):
         examples = []
         for entry in tqdm(input_data):
             title = entry["title"]
-            for paragraph in entry["dialogues"]:
+            for paragraph in entry["paragraphs"]:
                 context_text = paragraph["context"]
                 for qa in paragraph["qas"]:
                     qas_id = qa["id"]
@@ -729,7 +732,7 @@ def squad_convert_examples_to_features(
                                                      max_query_length=max_query_length,
                                                      doc_stride=doc_stride,
                                                      padding_strategy=padding_strategy,
-                                                     is_training=True)
+                                                     is_training=is_training)
         features.append(feature)
 
     new_features = []
@@ -845,7 +848,7 @@ def load_and_cache_example(opt, tokenizer, evaluate=False, output_examples=False
                                                                max_seq_length=opt.max_seq_length,
                                                                doc_stride=opt.doc_stride,
                                                                max_query_length=opt.max_query_length,
-                                                               is_training=True)
+                                                               is_training=not evaluate)
     if output_examples:
         return dataset, examples, features
     return dataset
@@ -937,6 +940,9 @@ def train(opt, train_dataset, model, tokenizer):
     for _ in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration")
         for step, batch in enumerate(epoch_iterator):
+            # for test
+            if step > 1:
+                break
 
             # Skip past any already trained steps if resuming training
             if steps_trained_in_current_epoch > 0:
@@ -966,7 +972,7 @@ def train(opt, train_dataset, model, tokenizer):
             if (step + 1) % opt.gradient_accumulation_steps == 0:
                 # Clips gradient norm of an iterable of parameters
                 temp = model.parameters()
-                torch.nn.utils.clip_grad_norm(model.named_parameters(), opt.max_grad_norm)
+                torch.nn.utils.clip_grad_norm(model.parameters(), opt.max_grad_norm)
 
                 optimizer.step()
                 scheduler.step()
@@ -1149,7 +1155,7 @@ def compute_predictions_logits(
         score_null = 1000000  # large and positive
         min_null_feature_index = 0  # the paragraph slice with min null score
         null_start_logit = 0  # the start logit at the slice with min null score
-        null_end_logit = 0    # the end logit at the slice with min null score
+        null_end_logit = 0  # the end logit at the slice with min null score
         for (feature_index, feature) in enumerate(features):
             result = unique_id_to_result[feature.unique_id]
             start_indexes = _get_best_indexes(result.start_logits, n_best_size)
@@ -1649,24 +1655,24 @@ if __name__ == "__main__":
 
         # Load a trained model and vocabulary that you have fine-tuned
         model = AutoModelForQuestionAnswering.from_pretrained(opt.output_dir)
-        tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
-        model.to(args.device)
+        tokenizer = AutoTokenizer.from_pretrained(opt.output_dir, do_lower_case=opt.do_lower_case)
+        model.to(opt.device)
 
     # Evaluation - we can ask to evaluate all the checkpoints (sub-directories) in a directory
     results = {}
-    if args.do_eval:
-        if args.do_train:
+    if opt.do_eval:
+        if opt.do_train:
             logger.info("Loading checkpoints saved during training for evaluation")
-            checkpoints = [args.output_dir]
-            if args.eval_all_checkpoints:
+            checkpoints = [opt.output_dir]
+            if opt.eval_all_checkpoints:
                 checkpoints = list(
                     os.path.dirname(c)
-                    for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
+                    for c in sorted(glob.glob(opt.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
                 )
 
         else:
-            logger.info("Loading checkpoint %s for evaluation", args.model_name_or_path)
-            checkpoints = [args.model_name_or_path]
+            logger.info("Loading checkpoint %s for evaluation", opt.model_name_or_path)
+            checkpoints = [opt.model_name_or_path]
 
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
 
@@ -1674,10 +1680,10 @@ if __name__ == "__main__":
             # Reload the model
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
             model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)  # , force_download=True)
-            model.to(args.device)
+            model.to(opt.device)
 
             # Evaluate
-            result = evaluate(args, model, tokenizer, prefix=global_step)
+            result = evaluate(opt, model, tokenizer, prefix=global_step)
 
             result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
             results.update(result)
